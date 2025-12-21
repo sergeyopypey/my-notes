@@ -1,0 +1,8 @@
+<web-panel key='my-notes' name='ScriptRunner generated web panel - my-notes' location='com.atlassian.jira.plugin.headernav.right.context' weight='20' class='script:writer.write("""&lt;li&gt;&#13;&#10;  &lt;a class="sr-notes sr-trigger-dialog jira-mynotes-plugin" role="button" id="jira-mynotes-link" href="/rest/scriptrunner/latest/custom/notesDialog?_=1"&gt;&#13;&#10;    &lt;span class="aui-icon aui-icon-small aui-iconfont-lightbulb-filled"&gt;My Notes&lt;/span&gt;&#13;&#10;  &lt;/a&gt;&#13;&#10;&lt;/li&gt;""")'>
+  <label>Notes</label>
+  <condition class='script:true'>
+    <param name='£trackingParameters' value='{"scriptName":"com.onresolve.scriptrunner.canned.jira.fragments.CustomWebPanel"}' />
+    <param name='£fragmentParameters' value='{"id":"7b35d43f-ec54-43e1-95d3-c4107b931564"}' />
+  </condition>
+  <param name='lazy' value='true' />
+</web-panel>

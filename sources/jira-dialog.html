@@ -1,0 +1,303 @@
+<section role="dialog" id="sr-dialog" class="aui-dialog2 aui-dialog2-medium">
+    <header class="aui-dialog2-header">
+        <h2 class="aui-dialog2-header-main">Notes</h2>
+        <a class="aui-dialog2-header-close">
+            <span class="aui-icon aui-icon-small aui-iconfont-close-dialog">Close</span>
+        </a>
+    </header>
+    <div id="my-notes-header">
+        <ul class="aui-nav my-notes-nav">
+            <li id="my-notes-quicksearch-menu">
+                <span class="aui-icon aui-icon-small aui-iconfont-search"></span>
+                <input id="my-notes-search" class="aui-search-input" type="search" placeholder="Search notes"
+                    aria-label="Search notes">
+            </li>
+            <li id="my-notes-count-menu">
+                <p class="aui-text-subtle" id="my-notes-count">0 notes</p>
+            </li>
+        </ul>
+    </div>
+    <div id="my-notes-create-form">
+        <form id="my-notes-new-note-form" class="aui">
+            <div class="aui-field-group">
+                <label for="my-notes-new-note-title">Title</label>
+                <input type="text" id="my-notes-new-note-title" name="title" required>
+            </div>
+            <div class="aui-field-group">
+                <label for="my-notes-new-note-duedate">Due date</label>
+                <input type="datetime-local" id="my-notes-new-note-duedate" name="duedate">
+            </div>
+            <div class="aui-field-group">
+                <label for="my-notes-new-note-text">Note</label>
+                <textarea id="my-notes-new-note-text" name="text" rows="4" required></textarea>
+            </div>
+            <div class="aui-dialog2-footer">
+                <div class="aui-dialog2-footer-actions my-notes-footer-actions">
+                    <button id="my-notes-cancel-new-note-button" class="aui-button">Cancel</button>
+                </div>
+                <div class="my-notes-footer-actions">
+                    <button id="my-notes-save-new-note-button" class="aui-button aui-button-primary"
+                        type="submit">Save</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div id="my-notes-list">
+        <table class="aui">
+            <tbody>
+                <!-- Notes will be dynamically inserted here -->
+                <!-- <tr id="my-notes-item-${note.id}">
+                    <td>
+                        <div class="aui-message my-notes-item">
+                            <div class="my-notes-content">
+                                <strong class="title">${note.title}</strong>
+                                <div class="my-notes-duedate">
+                                    Due: ${new Date(note.dueDate).toLocaleString()}
+                                </div>
+                                <div class="my-notes-text">
+                                    <p>${note.text}</p>
+                                </div>
+                            </div>
+                            <div class="my-notes-actions">
+                                <button class="aui-button aui-button-subtle aui-button-compact my-notes-action-button"
+                                    title="Edit note">
+                                    <span class="aui-icon aui-icon-small aui-iconfont-edit">Edit</span>
+                                </button>
+                                <button class="aui-button aui-button-subtle aui-button-compact my-notes-action-button"
+                                    title="Delete note">
+                                    <span class="aui-icon aui-icon-small aui-iconfont-remove">Delete</span>
+                                </button>
+                            </div>
+                        </div>
+                    </td>
+                </tr> -->
+            </tbody>
+        </table>
+    </div>
+    <footer class="aui-dialog2-footer">
+        <div class="aui-dialog2-footer-actions my-notes-footer-actions">
+            <button id="my-notes-close-dialog-button" class="aui-button aui-button-link">Close</button>
+        </div>
+        <div class="my-notes-footer-actions">
+            <button id="my-notes-new-note-button" class="aui-button aui-button-primary">New note</button>
+        </div>
+    </footer>
+    <script>
+        const MYNOTES_PROPERTY_KEY = "com.troshin.jira.plugins.mynotes"
+        const MYNOTES_DOESNT_EXIST_ERROR = "The property " + MYNOTES_PROPERTY_KEY + " does not exist."
+
+        AJS.toInit(function () {
+            // Initially hide new note form
+            AJS.$("#my-notes-create-form").hide()
+
+            // Show new note form on button click
+            AJS.$("#my-notes-new-note-button").click(function () {
+                AJS.$("#my-notes-create-form").show();
+            });
+
+            // Hide new note form on cancel
+            AJS.$("#my-notes-cancel-new-note-button").click(function () {
+                AJS.$("#my-notes-create-form").hide();
+            });
+
+            // Close dialog
+            AJS.$("#my-notes-close-dialog-button, .aui-iconfont-close-dialog").click(function () {
+                AJS.dialog2("#sr-dialog").remove();
+            });
+
+            // Search notes
+            AJS.$("#my-notes-search").on("input", function () {
+                const query = this.value.toLowerCase();
+                AJS.$("#my-notes-list tbody tr").each(function () {
+                    const title = AJS.$(this).find(".title").text().toLowerCase();
+                    const text = AJS.$(this).find(".my-notes-text").text().toLowerCase();
+                    if (title.includes(query) || text.includes(query)) {
+                        AJS.$(this).show();
+                    } else {
+                        AJS.$(this).hide();
+                    }
+                });
+            });
+
+            // Fetch and render notes on dialog open
+            renderNotesList();
+
+            // Handle new note form submission
+            AJS.$("#my-notes-new-note-form").submit(function (event) {
+                event.preventDefault();
+                let notes = getAllNotes();
+                console.log("Fetched notes data:", notes);
+                const newNote = {
+                    id: Date.now().toString(),
+                    title: this.title.value,
+                    tags: [], // Tags can be added later
+                    dueDate: this.duedate.value,
+                    text: this.text.value
+                };
+                notes.push(newNote);
+                createOrUpdateNotesProperty(notes);
+                this.reset();
+                AJS.$("#my-notes-create-form").hide();
+                renderNotesList();
+            });
+        });
+
+        function getAllNotes() {
+            let notes = null;
+            const userName = JIRA.Users.LoggedInUser.userName();
+            const response = AJS.$.ajax({
+                url: AJS.contextPath() + "/rest/api/2/user/properties/" + MYNOTES_PROPERTY_KEY + "?username=" + userName,
+                type: "GET",
+                contentType: "application/json",
+                async: false,
+                success: function (response) {
+                    return response;
+                },
+                error: function (xhr, status, error) {
+                    console.error("Error fetching notes:", error);
+                    return null;
+                }
+            });
+            console.log("AJAX response:", response);
+            if (response.status === 200) {
+                notes = response.responseJSON.value
+            } else {
+                console.error("Failed to fetch notes data. Status:", response.status);
+            }
+            return notes;
+        }
+
+        function createOrUpdateNotesProperty(notes) {
+            const userName = JIRA.Users.LoggedInUser.userName();
+            AJS.$.ajax({
+                url: AJS.contextPath() + "/rest/api/2/user/properties/" + MYNOTES_PROPERTY_KEY + "?username=" + userName,
+                type: "PUT",
+                contentType: "application/json",
+                data: JSON.stringify(notes),
+                async: false,
+                success: function () {
+                    console.log("Notes property created/updated successfully");
+                },
+                error: function (xhr, status, error) {
+                    console.error("Error creating/updating notes property:", error);
+                }
+            });
+        }
+
+        function deleteNoteById(noteId) {
+            const userName = JIRA.Users.LoggedInUser.userName();
+            let notes = getAllNotes();
+            notes = notes.filter(note => note.id !== noteId);
+            AJS.$.ajax({
+                url: AJS.contextPath() + "/rest/api/2/user/properties/" + MYNOTES_PROPERTY_KEY + "?username=" + userName,
+                type: "PUT",
+                contentType: "application/json",
+                data: JSON.stringify(notes),
+                async: false,
+                success: function () {
+                    console.log("Note deleted successfully");
+                },
+                error: function (xhr, status, error) {
+                    console.error("Error deleting note:", error);
+                }
+            });
+            renderNotesList();
+        }
+
+        function renderNotesList() {
+            let notes = getAllNotes();
+            let notesCounts = notes ? notes.length : 0;
+            AJS.$("#my-notes-count").text(notes.length + (notes.length === 1 ? " note" : " notes"));
+            console.log("Initial notes data:", notes);
+            const notesListContainer = AJS.$("#my-notes-list tbody");
+            notesListContainer.empty(); // Clear existing notes
+
+            notes.forEach(note => {
+                const noteRow = AJS.$(`
+                    <tr id="my-notes-item-${note.id}">
+                        <td>
+                            <div class="aui-message my-notes-item">
+                                <div class="my-notes-content">
+                                    <strong class="title">${note.title}</strong>
+                                    <div class="my-notes-duedate">
+                                        Due: ${new Date(note.dueDate).toLocaleString()}
+                                    </div>
+                                    <div class="my-notes-text">
+                                        <p>${note.text}</p>
+                                    </div>
+                                </div>
+                                <div class="my-notes-actions">
+                                    <button class="aui-button aui-button-subtle aui-button-compact my-notes-action-button" title="Edit note">
+                                        <span class="aui-icon aui-icon-small aui-iconfont-edit">Edit</span>
+                                    </button>
+                                    <button class="aui-button aui-button-subtle aui-button-compact my-notes-action-button" title="Delete note">
+                                        <span class="aui-icon aui-icon-small aui-iconfont-remove">Delete</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `);
+                notesListContainer.append(noteRow);
+            });
+
+            AJS.$(".aui-iconfont-edit").click(function () {
+                const noteId = AJS.$(this).closest("tr").attr("id").replace("my-notes-item-", "");
+                alert("Edit functionality for note ID " + noteId + " is not implemented yet.");
+            });
+
+            AJS.$(".aui-iconfont-remove").click(function () {
+                const noteId = AJS.$(this).closest("tr").attr("id").replace("my-notes-item-", "");
+                confirm("Are you sure you want to delete this note?") && deleteNoteById(noteId);
+            });
+        }
+    </script>
+    <style>
+        #my-notes-quicksearch-menu {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #f4f6f8;
+            border: 1px solid rgba(9, 30, 66, 0.06);
+            padding: 6px 8px;
+            border-radius: 6px;
+        }
+
+        #my-notes-search {
+            border: none;
+            background: transparent;
+            width: 100%;
+            outline: none;
+        }
+
+        .my-notes-nav {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+        }
+
+        .my-notes-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .my-notes-duedate {
+            background: #f4f4f4;
+            color: #444;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .my-notes-actions {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .my-notes-action-button {
+            margin-left: auto;
+            margin-top: 8px;
+        }
+    </style>
+</section>

@@ -1,0 +1,26 @@
+<li>
+    <a class="sr-notes sr-trigger-dialog jira-my-notes-plugin" role="button" id="jira-my-notes-link"
+        href="http://localhost:5500/sources/jira-dialog.html">
+        <span class="aui-icon aui-icon-small aui-iconfont-lightbulb-filled my-notes-icon">
+            My Notes
+        </span>
+    </a>
+</li>
+
+<style>
+    .my-notes-icon {
+        position: relative;
+        display: inline-block;
+    }
+
+    .my-notes-icon::after {
+        content: "";
+        position: absolute;
+        top: 1px;
+        right: -1px;
+        width: 8px;
+        height: 8px;
+        background: #FF0000;
+        border-radius: 50%;
+    }
+</style>

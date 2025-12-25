@@ -18,18 +18,23 @@
         </ul>
     </div>
     <div id="my-notes-create-form">
-        <form id="my-notes-new-note-form" class="aui">
-            <div class="aui-field-group">
-                <label for="my-notes-new-note-title">Title</label>
-                <input type="text" id="my-notes-new-note-title" name="title" required>
-            </div>
-            <div class="aui-field-group">
-                <label for="my-notes-new-note-duedate">Due date</label>
-                <input type="datetime-local" id="my-notes-new-note-duedate" name="duedate">
-            </div>
-            <div class="aui-field-group">
-                <label for="my-notes-new-note-text">Note</label>
-                <textarea id="my-notes-new-note-text" name="text" rows="4" required></textarea>
+        <form id="my-notes-new-note-form" class="aui my-notes-form">
+            <div class="my-notes-fields-container">
+                <div class="field-group my-notes-field-group">
+                    <label for="my-notes-new-note-title">Title<span
+                            class="aui-icon icon-required">(required)</span></label>
+                    <input class="text" type="text" id="my-notes-new-note-title" name="title" required>
+                </div>
+                <div class="field-group my-notes-field-group">
+                    <label for="my-notes-new-note-duedate">Due date</label>
+                    <input class="text datepicker-input" type="datetime-local" id="my-notes-new-note-duedate"
+                        name="duedate">
+                </div>
+                <div class="field-group my-notes-field-group">
+                    <label for="my-notes-new-note-text">Note<span
+                            class="aui-icon icon-required">(required)</span></label>
+                    <textarea class="textarea" id="my-notes-new-note-text" name="text" rows="4" required></textarea>
+                </div>
             </div>
             <div class="aui-dialog2-footer">
                 <div class="aui-dialog2-footer-actions my-notes-footer-actions">
@@ -213,14 +218,16 @@
             notesListContainer.empty(); // Clear existing notes
 
             notes.forEach(note => {
+                const dueDate = new Date(note.dueDate);
+                const isOverdue = note.dueDate && dueDate < new Date();
                 const noteRow = AJS.$(`
                     <tr id="my-notes-item-${note.id}">
                         <td>
                             <div class="aui-message my-notes-item">
                                 <div class="my-notes-content">
                                     <strong class="title">${note.title}</strong>
-                                    <div class="my-notes-duedate">
-                                        Due: ${new Date(note.dueDate).toLocaleString()}
+                                    <div class="my-notes-duedate ${isOverdue ? 'my-notes-overdue' : ''}">
+                                        Due: ${note.dueDate ? new Date(note.dueDate).toLocaleString() : "No dueDate"}
                                     </div>
                                     <div class="my-notes-text">
                                         <p>${note.text}</p>
@@ -253,6 +260,14 @@
         }
     </script>
     <style>
+        #sr-dialog {
+            max-height: 80vh;
+        }
+
+        /* #my-notes-create-form {
+            display: block;
+        } */
+
         #my-notes-quicksearch-menu {
             display: flex;
             align-items: center;
@@ -270,12 +285,26 @@
             outline: none;
         }
 
+        #my-notes-list {
+            overflow-y: auto;
+        }
+
         .my-notes-nav {
             display: flex;
             align-items: center;
             gap: 10px;
             padding: 10px 16px;
         }
+
+        /* .my-notes-fields-container {
+            display: grid;
+            grid-template-columns: 1fr 220px;
+            align-items: start;
+        }
+
+        .my-notes-field-group {
+
+        } */
 
         .my-notes-item {
             display: flex;
@@ -284,10 +313,22 @@
         }
 
         .my-notes-duedate {
+            margin-top: 6px;
             background: #f4f4f4;
             color: #444;
             padding: 4px 8px;
             border-radius: 4px;
+        }
+
+        .my-notes-overdue {
+            background: #ffebe6;
+            color: #bf2600;
+
+        }
+
+        .my-notes-text {
+            margin-top: 6px;
+            word-break: break-word;
         }
 
         .my-notes-actions {
